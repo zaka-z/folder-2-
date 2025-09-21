@@ -1,37 +1,56 @@
 <!DOCTYPE html>
 <html lang="fa">
-<head>
-  <meta charset="UTF-8">
-  <title>داشبورد ادمین</title>
-  <link rel="stylesheet" href="style.css">
-  <style>
-    ul li { display:flex; justify-content:space-between; align-items:center; background:#f9f9f9; margin:5px 0; padding:8px; border-radius:5px; }
-    ul li span { flex:1; text-align:right; margin-right:10px; }
-    .actions button { margin-left:5px; padding:5px 8px; border:none; border-radius:4px; cursor:pointer; }
-    .edit-btn { background:#ffc107; color:#000; }
-    .delete-btn { background:#dc3545; color:#fff; }
-    .topbar { display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; }
-  </style>
-</head>
+<head><meta charset="UTF-8"><title>داشبورد</title></head>
 <body>
-  <div class="dashboard">
-    <div class="topbar">
-      <h2>داشبورد ادمین</h2>
-      <form id="logoutForm" method="POST" action="/logout" style="margin:0;">
-        <input type="hidden" name="_csrf" id="csrfLogout" />
-        <button type="submit">خروج</button>
-      </form>
-    </div>
-
-    <form id="dataForm">
-      <input type="text" id="info" placeholder="اطلاعات جدید" required>
-      <button type="submit">➕ ذخیره</button>
-      <input type="hidden" id="csrfData" />
-    </form>
-
-    <h3>اطلاعات ذخیره‌شده:</h3>
-    <ul id="dataList"></ul>
-  </div>
+  <form id="logoutForm" method="POST" action="/logout">
+    <input type="hidden" name="_csrf" id="csrfLogout">
+    <button type="submit">خروج</button>
+  </form>
+  <form id="dataForm">
+    <input type="text" id="info" placeholder="اطلاعات جدید" required>
+    <button type="submit">ذخیره</button>
+    <input type="hidden" id="csrfData">
+  </form>
+  <ul id="dataList"></ul>
   <script src="script.js"></script>
 </body>
 </html>
+  <script>
+    // Fetch CSRF token for logout form
+    fetch("/csrf-token", { credentials: "same-origin" })
+      .then(r => r.json())
+      .then(d => { document.getElementById("csrfLogout").value = d.csrfToken; });
+
+    // Fetch CSRF token for data form
+    fetch("/csrf-token", { credentials: "same-origin" })
+      .then(r => r.json())
+      .then(d => { document.getElementById("csrfData").value = d.csrfToken; });
+
+    // Handle data form submission
+    document.getElementById("dataForm").addEventListener("submit", function(e) {
+      e.preventDefault();
+      const info = document.getElementById("info").value;
+      const csrfToken = document.getElementById("csrfData").value;
+
+      fetch("/data", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "CSRF-Token": csrfToken
+        },
+        body: JSON.stringify({ info }),
+        credentials: "same-origin"
+      })
+      .then(response => response.json())
+      .then(data => {
+        if (data.success) {
+          const li = document.createElement("li");
+          li.textContent = info;
+          document.getElementById("dataList").appendChild(li);
+          document.getElementById("info").value = "";
+        } else {
+          alert("خطا در ذخیره اطلاعات");
+        }
+      });
+    });
+  </script>
