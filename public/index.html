@@ -1,14 +1,25 @@
 <!DOCTYPE html>
 <html lang="fa">
-<head><meta charset="UTF-8"><title>ورود</title></head>
+<head>
+  <meta charset="UTF-8">
+  <title>ورود ادمین</title>
+</head>
 <body>
-  <form id="loginForm" method="POST" action="/login">
-    <input type="text" name="username" placeholder="نام کاربری" required>
-    <input type="password" name="password" placeholder="رمز عبور" required>
+  <h2>ورود به سیستم</h2>
+  <form method="POST" action="/login">
+    <label>نام کاربری:</label>
+    <input type="text" name="username" required>
+    <br>
+    <label>رمز عبور:</label>
+    <input type="password" name="password" required>
+    <br>
+    <!-- توکن CSRF -->
     <input type="hidden" name="_csrf" id="csrf">
     <button type="submit">ورود</button>
   </form>
+
   <script>
+    // گرفتن توکن CSRF و قرار دادن در فرم
     fetch("/csrf-token", { credentials: "same-origin" })
       .then(r => r.json())
       .then(d => { document.getElementById("csrf").value = d.csrfToken; });

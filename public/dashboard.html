@@ -1,56 +1,74 @@
 <!DOCTYPE html>
 <html lang="fa">
-<head><meta charset="UTF-8"><title>داشبورد</title></head>
+<head>
+  <meta charset="UTF-8">
+  <title>داشبورد ادمین</title>
+</head>
 <body>
+  <h2>پنل مدیریت</h2>
+
+  <!-- فرم خروج -->
   <form id="logoutForm" method="POST" action="/logout">
     <input type="hidden" name="_csrf" id="csrfLogout">
     <button type="submit">خروج</button>
   </form>
+
+  <!-- فرم افزودن داده -->
   <form id="dataForm">
     <input type="text" id="info" placeholder="اطلاعات جدید" required>
-    <button type="submit">ذخیره</button>
     <input type="hidden" id="csrfData">
+    <button type="submit">ذخیره</button>
   </form>
+
+  <h3>لیست داده‌ها</h3>
   <ul id="dataList"></ul>
-  <script src="script.js"></script>
-</body>
-</html>
+
   <script>
-    // Fetch CSRF token for logout form
-    fetch("/csrf-token", { credentials: "same-origin" })
-      .then(r => r.json())
-      .then(d => { document.getElementById("csrfLogout").value = d.csrfToken; });
+    // گرفتن توکن CSRF و ست کردن در فرم‌ها
+    async function getCsrf() {
+      const res = await fetch("/csrf-token", { credentials: "same-origin" });
+      const { csrfToken } = await res.json();
+      document.getElementById("csrfData").value = csrfToken;
+      document.getElementById("csrfLogout").value = csrfToken;
+      return csrfToken;
+    }
 
-    // Fetch CSRF token for data form
-    fetch("/csrf-token", { credentials: "same-origin" })
-      .then(r => r.json())
-      .then(d => { document.getElementById("csrfData").value = d.csrfToken; });
+    // جلوگیری از XSS
+    function escapeHTML(str) {
+      return str.replace(/[&<>"']/g, s => ({
+        "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"
+      }[s]));
+    }
 
-    // Handle data form submission
-    document.getElementById("dataForm").addEventListener("submit", function(e) {
+    // گرفتن داده‌ها از سرور
+    async function fetchData() {
+      const res = await fetch("/data");
+      const data = await res.json();
+      const list = document.getElementById("dataList");
+      list.innerHTML = "";
+      data.forEach(item => {
+        const li = document.createElement("li");
+        li.textContent = `${item.id}: ${escapeHTML(item.info)} (${item.time})`;
+        list.appendChild(li);
+      });
+    }
+
+    // ذخیره داده جدید
+    document.getElementById("dataForm").addEventListener("submit", async e => {
       e.preventDefault();
       const info = document.getElementById("info").value;
-      const csrfToken = document.getElementById("csrfData").value;
-
-      fetch("/data", {
+      const csrf = document.getElementById("csrfData").value;
+      const res = await fetch("/save", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "CSRF-Token": csrfToken
-        },
-        body: JSON.stringify({ info }),
-        credentials: "same-origin"
-      })
-      .then(response => response.json())
-      .then(data => {
-        if (data.success) {
-          const li = document.createElement("li");
-          li.textContent = info;
-          document.getElementById("dataList").appendChild(li);
-          document.getElementById("info").value = "";
-        } else {
-          alert("خطا در ذخیره اطلاعات");
-        }
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ info, _csrf: csrf })
       });
+      const result = await res.json();
+      if (result.success) fetchData();
     });
+
+    // شروع: گرفتن CSRF و سپس گرفتن داده‌ها
+    getCsrf().then(fetchData);
   </script>
+</body>
+</html>
